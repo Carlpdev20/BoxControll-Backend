@@ -1,0 +1,13 @@
+package com.proyecto.auth.repository;
+
+import com.proyecto.auth.model.TenantAdmin;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+import java.util.Optional;
+import java.util.UUID;
+
+@Repository
+public interface TenantAdminRepository extends JpaRepository<TenantAdmin, UUID> {
+	
+    Optional<TenantAdmin> findByEmail(String email);
+}
