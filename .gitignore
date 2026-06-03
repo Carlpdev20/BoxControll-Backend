@@ -1,0 +1,20 @@
+# Compilados de Maven
+target/
+*.egg-info/
+
+# Archivos de configuración de Eclipse / STS
+.metadata/
+.classpath
+.project
+.settings/
+.springBeans
+.sts4-cache/
+bin/
+
+# Configuraciones de IntelliJ (por si acaso)
+.idea/
+*.iml
+
+# Archivos del sistema operativo
+.DS_Store
+Thumbs.db
