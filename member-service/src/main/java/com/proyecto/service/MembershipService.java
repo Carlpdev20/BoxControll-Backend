@@ -1,17 +1,22 @@
 package com.proyecto.service;
 
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.proyecto.dto.MembershipDTO;
+import com.proyecto.member.client.BillingFeignClient;
 import com.proyecto.model.Member;
 import com.proyecto.model.Membership;
 import com.proyecto.model.MembershipPlan;
 import com.proyecto.repository.MemberRepository;
 import com.proyecto.repository.MembershipPlanRepository;
 import com.proyecto.repository.MembershipRepository;
+
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import java.util.List;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -20,6 +25,7 @@ public class MembershipService {
     private final MembershipRepository membershipRepository;
     private final MemberRepository memberRepository;
     private final MembershipPlanRepository planRepository;
+    private final BillingFeignClient billingFeignClient;
 
     public List<Membership> listarPorTenant(UUID tenantId) {
         return membershipRepository.findByTenantId(tenantId);
@@ -33,26 +39,49 @@ public class MembershipService {
 
     @Transactional
     public Membership crear(MembershipDTO dto) {
-        // 🔒 Verificamos que el miembro exista y sea propiedad de este tenant
+        // 🔒 Verificaciones de seguridad existentes...
         Member member = memberRepository.findByTenantIdAndId(dto.getTenantId(), dto.getMemberId())
                 .orElseThrow(() -> new RuntimeException("Miembro no encontrado en este gimnasio"));
 
-        // 🔒 Verificamos que el plan exista y sea propiedad de este tenant
         MembershipPlan plan = planRepository.findByTenantIdAndId(dto.getTenantId(), dto.getMembershipPlanId())
                 .orElseThrow(() -> new RuntimeException("Plan comercial no encontrado en este gimnasio"));
 
+        // 2. Persistencia local del contrato
         Membership ms = new Membership();
-        ms.setTenantId(dto.getTenantId()); // Uso del campo plano optimizado
+        ms.setTenantId(dto.getTenantId());
         ms.setMember(member);
         ms.setMembershipPlan(plan);
         ms.setAffiliationDate(dto.getAffiliationDate());
         ms.setStartDate(dto.getStartDate());
-        
-        // ✨ Se conserva tu cálculo automático basado en los días de duración del plan 
         ms.setEndDate(dto.getStartDate().plusDays(plan.getDurationDays()));
         ms.setStatus(dto.getStatus() != null ? dto.getStatus() : "active");
         
-        return membershipRepository.save(ms);
+        Membership membershipGuardada = membershipRepository.save(ms);
+
+        // ============================================================================
+        // 🔥 MICROSERVICIOS CON OPENFEIGN!
+        // ============================================================================
+        try {
+            // Preparamos los datos financieros requeridos por la otra DB
+            Map<String, Object> invoicePayload = new java.util.HashMap<>();
+            invoicePayload.put("membershipId", membershipGuardada.getId());
+            invoicePayload.put("memberId", member.getId());
+            // Generamos un correlativo automatico para simular una factura real
+            invoicePayload.put("invoiceNumber", "CUOTA-" + System.currentTimeMillis() % 100000);
+            invoicePayload.put("amount", plan.getPrice()); // Monto extraído del catálogo comercial
+            invoicePayload.put("dueDate", membershipGuardada.getStartDate().plusDays(7)); // 7 días de gracia para pagar
+
+            // Disparo síncrono inter-servicio pasando el Tenant ID en el Header
+            billingFeignClient.crearCuota(dto.getTenantId(), invoicePayload);
+            
+        } catch (Exception e) {
+            // Si el billing-service está apagado, lanzamos excepción para hacer ROLLBACK 
+            // del contrato y evitar inconsistencia de datos
+            throw new RuntimeException("No se pudo procesar la suscripcion porque el modulo financiero no responde. Motivo: " + e.getMessage());
+        }
+        // ============================================================================
+
+        return membershipGuardada;
     }
 
     @Transactional

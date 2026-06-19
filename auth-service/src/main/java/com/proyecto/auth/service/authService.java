@@ -10,22 +10,25 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
-public class authService {
+public class AuthService {
 
-    @Autowired
+	@Autowired
     private TenantAdminRepository repoAdmin;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    // REGISTRO REAL EN BASE DE DATOS
+    // REGISTRO OPTIMIZADO PARA ENTORNOS SAAS MULTI-TENANT
     public TenantAdmin registrarAdmin(RegistroAdminDTO dto) {
-        // 1. Validar que el email no exista en PostgreSQL
-        if (repoAdmin.findByEmail(dto.email).isPresent()) {
-            throw new RuntimeException("El correo electrónico ya está registrado");
+        
+        // 1. Validar unicidad del correo ÚNICAMENTE dentro del mismo gimnasio (Tenant)
+        // Nota: Asegúrate de que tu interfaz TenantAdminRepository tenga declarado el método:
+        // Optional<TenantAdmin> findByTenantIdAndEmail(UUID tenantId, String email);
+        if (repoAdmin.findByTenantIdAndEmail(dto.tenantId, dto.email).isPresent()) { // 🔒 Regla del caso de uso
+            throw new RuntimeException("El correo electrónico ya está registrado en este gimnasio");
         }
 
-        // 2. Mapear los datos del DTO a la Entidad Real
+        // 2. Mapear DTO a Entidad
         TenantAdmin admin = new TenantAdmin();
         admin.setFirstName(dto.firstName);
         admin.setLastName(dto.lastName);
@@ -33,20 +36,22 @@ public class authService {
         admin.setTenantId(dto.tenantId);
         admin.setActive(true);
 
-        // 3. Encriptar la contraseña usando BCrypt antes de guardar
+        // 3. Encriptación hash segura con BCrypt
         admin.setPasswordHash(passwordEncoder.encode(dto.password));
 
-        // 4. Guardar en la base de datos
+        // 4. Persistencia en la tabla tenant_admins
         return repoAdmin.save(admin);
     }
 
-    // LOGIN REAL CON VALIDACIÓN DE CONTRASEÑA ENCRIPTADA
+    // LOGIN DE USUARIOS
     public TenantAdmin login(LoginDTO dto) {
         // 1. Buscar el usuario por email
+        // Nota técnica: Si un usuario maneja cuentas en distintos gimnasios con el mismo email,
+        // lo ideal a futuro es que el Login reciba también el 'slug' o 'tenantId' para aislarlo.
         TenantAdmin admin = repoAdmin.findByEmail(dto.email)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
-        // 2. Comparar la clave limpia del DTO con el hash encriptado de la BD
+        // 2. Comparación segura de hashes (Clave limpia vs Hash de la BD)
         if (!passwordEncoder.matches(dto.password, admin.getPasswordHash())) {
             throw new RuntimeException("Contraseña incorrecta");
         }

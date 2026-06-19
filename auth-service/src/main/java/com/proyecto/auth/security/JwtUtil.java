@@ -2,6 +2,7 @@ package com.proyecto.auth.security;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.UUID;
 
 import javax.crypto.SecretKey;
 
@@ -31,11 +32,10 @@ public class JwtUtil {
         this.key = Keys.hmacShaKeyFor(secretString.getBytes(StandardCharsets.UTF_8));
     }
 
-    // Modificado para recibir el email y el tenant_id del administrador
-    public String generateToken(String email, String tenantId) {
+    public String generateToken(String email, UUID tenanId) {
         return Jwts.builder()
                 .setSubject(email)
-                .claim("tenant_id", tenantId) // Atributo clave para el aislamiento SaaS Multi-tenant
+                .claim("tenant_id", tenanId.toString())
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + jwtExpiration))
                 .signWith(key, SignatureAlgorithm.HS256)

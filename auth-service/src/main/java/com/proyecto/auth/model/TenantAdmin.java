@@ -2,77 +2,27 @@ package com.proyecto.auth.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 import java.util.UUID;
 
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 @Entity
-@Table(name = "tenant_admins")
+@Table(name = "tenant_admins", uniqueConstraints = {
+    @UniqueConstraint(columnNames = {"tenant_id", "email"})
+})
 public class TenantAdmin {
 
-    public UUID getId() {
-		return id;
-	}
-
-	public void setId(UUID id) {
-		this.id = id;
-	}
-
-	public UUID getTenantId() {
-		return tenantId;
-	}
-
-	public void setTenantId(UUID tenantId) {
-		this.tenantId = tenantId;
-	}
-
-	public String getEmail() {
-		return email;
-	}
-
-	public void setEmail(String email) {
-		this.email = email;
-	}
-
-	public String getPasswordHash() {
-		return passwordHash;
-	}
-
-	public void setPasswordHash(String passwordHash) {
-		this.passwordHash = passwordHash;
-	}
-
-	public String getFirstName() {
-		return firstName;
-	}
-
-	public void setFirstName(String firstName) {
-		this.firstName = firstName;
-	}
-
-	public String getLastName() {
-		return lastName;
-	}
-
-	public void setLastName(String lastName) {
-		this.lastName = lastName;
-	}
-
-	public Boolean getActive() {
-		return active;
-	}
-
-	public void setActive(Boolean active) {
-		this.active = active;
-	}
-
-	@Id
+    @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
     @Column(name = "tenant_id", nullable = false)
     private UUID tenantId;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false) 
     private String email;
 
     @Column(name = "password_hash", nullable = false)
@@ -84,5 +34,5 @@ public class TenantAdmin {
     @Column(name = "last_name")
     private String lastName;
 
-    private Boolean active;
+    private Boolean active = true;
 }

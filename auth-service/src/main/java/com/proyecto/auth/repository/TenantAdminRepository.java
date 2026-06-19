@@ -10,4 +10,5 @@ import java.util.UUID;
 public interface TenantAdminRepository extends JpaRepository<TenantAdmin, UUID> {
 	
 	Optional<TenantAdmin> findByEmail(String email);
+	Optional<TenantAdmin> findByTenantIdAndEmail(UUID tenantId, String email);
 }
