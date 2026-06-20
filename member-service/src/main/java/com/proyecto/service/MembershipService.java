@@ -104,6 +104,7 @@ public class MembershipService {
 
     @Transactional
     public void cancelarMembresia(UUID tenantId, UUID id) {
+    	System.out.println("DEBUG SAAS -> Buscando Tenant: " + tenantId + " | Membresia ID: " + id);
         // 🚫 Cambiado delete por cancelación lógica para resguardar la auditoría e historial del SaaS 
         Membership ms = buscarPorId(tenantId, id);
         ms.setStatus("cancelled");

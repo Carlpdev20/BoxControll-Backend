@@ -42,6 +42,10 @@ public class MembershipController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminar(@RequestHeader("X-Tenant-Id") UUID tenantId, @PathVariable UUID id) {
+    	System.out.println("=== DEBBUGING SAAS ===");
+        System.out.println("ID enviado desde Postman: " + id);
+        System.out.println("Tenant ID detectado por el sistema: " + tenantId);
+        System.out.println("======================");
         membershipService.cancelarMembresia(tenantId, id); // Redirigido al método de cancelación lógica
         return ResponseEntity.noContent().build();
     }

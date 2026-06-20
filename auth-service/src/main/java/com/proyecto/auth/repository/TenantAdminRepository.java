@@ -11,4 +11,5 @@ public interface TenantAdminRepository extends JpaRepository<TenantAdmin, UUID> 
 	
 	Optional<TenantAdmin> findByEmail(String email);
 	Optional<TenantAdmin> findByTenantIdAndEmail(UUID tenantId, String email);
+	Optional<TenantAdmin> findByTenantIdAndId(UUID tenantId, UUID id);
 }

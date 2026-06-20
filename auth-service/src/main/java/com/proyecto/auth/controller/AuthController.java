@@ -6,11 +6,13 @@ import com.proyecto.auth.model.TenantAdmin;
 import com.proyecto.auth.security.JwtUtil; // 👈 IMPORTAMOS EL UTILITARIO
 import com.proyecto.auth.service.AuthService; // 👈 Nombre de clase corregido
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/auth")
@@ -54,6 +56,33 @@ public class AuthController {
             return ResponseEntity.badRequest().body(e.getMessage());
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body("Error interno del servidor");
+        }
+    }
+    
+    @GetMapping("/profile/{id}")
+    public ResponseEntity<?> obtenerPerfil(
+            @RequestHeader("X-Tenant-Id") String tenantIdHeader,
+            @PathVariable UUID id) {
+        try {
+            UUID tenantId = UUID.fromString(tenantIdHeader);
+            
+            // Buscamos el admin delegando la validación cruzada al Service
+            TenantAdmin admin = authService.buscarPorTenantYId(tenantId, id);
+            
+            // Retornamos un payload limpio (evitando mandar la contraseña encriptada)
+            Map<String, Object> perfil = new HashMap<>();
+            perfil.put("id", admin.getId());
+            perfil.put("firstName", admin.getFirstName());
+            perfil.put("lastName", admin.getLastName());
+            perfil.put("email", admin.getEmail());
+            perfil.put("tenantId", admin.getTenantId());
+            
+            return ResponseEntity.ok(perfil);
+            
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body("Formato de cabeceras inválido.");
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         }
     }
 }
