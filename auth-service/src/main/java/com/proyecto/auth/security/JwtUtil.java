@@ -32,10 +32,12 @@ public class JwtUtil {
         this.key = Keys.hmacShaKeyFor(secretString.getBytes(StandardCharsets.UTF_8));
     }
 
-    public String generateToken(String email, UUID tenanId) {
+    // MODIFICADO: Agregamos el tercer parámetro 'idAdmin' para interceptar el UUID del usuario
+    public String generateToken(String email, UUID tenanId, UUID idAdmin) {
         return Jwts.builder()
                 .setSubject(email)
                 .claim("tenant_id", tenanId.toString())
+                .claim("user_id", idAdmin.toString()) // 👈 ¡NUEVO CLAIM! Aquí viaja el ID
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + jwtExpiration))
                 .signWith(key, SignatureAlgorithm.HS256)

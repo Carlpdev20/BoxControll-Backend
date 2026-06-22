@@ -30,17 +30,18 @@ public class AuthController {
         try {
             // Invoca la validación real en PostgreSQL
             TenantAdmin admin = authService.login(loginRequest);
-            
-            // GENERACIÓN REAL DEL TOKEN JWT MULTI-TENANT
-            String token = jwtUtil.generateToken(admin.getEmail(), admin.getTenantId());
-            
+
+            // CORREGIDO: Pasamos 3 parámetros para meter el ID del usuario dentro de los claims del JWT
+            String token = jwtUtil.generateToken(admin.getEmail(), admin.getTenantId(), admin.getId());
+
             // Estructura JSON limpia para el almacenamiento en el Frontend (Angular)
             Map<String, Object> response = new HashMap<>();
-            response.put("token", token);
+            response.put("id", admin.getId()); //Anadido el UUID
             response.put("tenant_id", admin.getTenantId());
-            
+            response.put("token", token);
+
             return ResponseEntity.ok(response);
-            
+
         } catch (RuntimeException e) {
             // Captura de "Usuario no encontrado" o "Contraseña incorrecta"
             return ResponseEntity.status(401).body(e.getMessage());
