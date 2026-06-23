@@ -41,7 +41,7 @@ public class GatewayController {
             @RequestBody(required = false) String body,
             HttpMethod method,
             HttpServletRequest request) {
-        return ejecutarProxySinJwt("http://localhost:8081", body, method, request);
+        return ejecutarProxySinJwt("http://auth-service:8081", body, method, request);
     }
 
     @RequestMapping("/api/billing/**")
@@ -49,7 +49,7 @@ public class GatewayController {
             @RequestBody(required = false) String body,
             HttpMethod method,
             HttpServletRequest request) {
-        return ejecutarProxyConJwt("http://localhost:8082", body, method, request);
+        return ejecutarProxyConJwt("http://billing-service:8082", body, method, request);
     }
 
     @RequestMapping("/api/**")
@@ -57,7 +57,7 @@ public class GatewayController {
             @RequestBody(required = false) String body,
             HttpMethod method,
             HttpServletRequest request) {
-        return ejecutarProxyConJwt("http://localhost:8084", body, method, request);
+        return ejecutarProxyConJwt("http://member-service:8084", body, method, request);
     }
 
     // ============================================================================

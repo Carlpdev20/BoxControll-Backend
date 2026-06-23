@@ -15,19 +15,6 @@ CREATE TABLE tenants (
 
 CREATE INDEX idx_tenants_slug ON tenants (slug);
 
--- 2. TABLA: tenant_admins
-CREATE TABLE tenant_admins (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id UUID NOT NULL,
-  email VARCHAR(255) NOT NULL,
-  password_hash VARCHAR(255) NOT NULL,
-  first_name VARCHAR(100),
-  last_name VARCHAR(100),
-  active BOOLEAN DEFAULT true,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
 CREATE UNIQUE INDEX idx_tenant_admins_tenant_email ON tenant_admins (tenant_id, email);
 CREATE INDEX idx_tenant_admins_email ON tenant_admins (email);
 
