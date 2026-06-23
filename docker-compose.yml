@@ -1,0 +1,59 @@
+services:
+  auth-service:
+    container_name: auth-service
+    build: auth-service/.
+    ports:
+      - "8081:8081"
+    environment:
+      - DB_URL=jdbc:postgresql://auth-db:5432/boxcontroll_auth_db
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=postgres
+    depends_on:
+      - auth-db
+
+  auth-db:
+    image: postgres:17-alpine
+    container_name: auth-db
+    environment:
+      POSTGRES_DB: boxcontroll_auth_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - auth_db_data:/var/lib/postgresql/data
+
+  gateway-server:
+    container_name: gateway-server
+    build: gateway-server/.
+    ports:
+      - "8080:8080"
+
+  member-service:
+    container_name: member-service
+    build: member-service/.
+    ports:
+      - "8084:8084"
+    environment:
+      - DB_URL=jdbc:postgresql://member-db:5432/boxcontroll_members_db
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=postgres
+    depends_on:
+      - member-db
+
+  member-db:
+    image: postgres:17-alpine
+    container_name: member-db
+    environment:
+      POSTGRES_DB: boxcontroll_members_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - member_db_data:/var/lib/postgresql/data
+
+
+volumes:
+  auth_db_data:
+  member_db_data:
