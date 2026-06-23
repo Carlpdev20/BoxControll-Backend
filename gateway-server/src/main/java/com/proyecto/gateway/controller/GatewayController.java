@@ -15,7 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod; // 👈 Agregado
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
@@ -23,7 +23,6 @@ import org.springframework.web.client.RestTemplate;
 import java.util.Collections;
 
 @RestController
-// 🔄 OPTIMIZADO: Declaramos explícitamente los métodos permitidos para el Preflight de CORS
 @CrossOrigin(
     origins = "http://localhost:4200", 
     allowCredentials = "true", 
@@ -62,11 +61,10 @@ public class GatewayController {
     }
 
     // ============================================================================
-    // MÉTODOS UTILITARIOS OPTIMIZADOS
+    // MÉTODOS UTILITARIOS REPARADOS
     // ============================================================================
     
     private ResponseEntity<String> ejecutarProxyConJwt(String baseServiceUrl, String body, HttpMethod method, HttpServletRequest request) {
-        // 🛡️ ESCUDO CRÍTICO: Si es un OPTIONS, respondemos 200 OK de inmediato para aprobar el CORS
         if (method == HttpMethod.OPTIONS) {
             return ResponseEntity.ok().build();
         }
@@ -79,7 +77,6 @@ public class GatewayController {
                     }
                 });
 
-        // 🔒 --- VALIDA_JWT (Solo se ejecuta para GET, POST, PUT, DELETE) ---
         String authHeader = request.getHeader("Authorization");
         
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
@@ -98,7 +95,7 @@ public class GatewayController {
                 if (tenantId != null) {
                     headers.set("X-Tenant-Id", tenantId); 
                 } else {
-                    return ResponseEntity.status(401).body("El token no contains un Tenant ID valido.");
+                    return ResponseEntity.status(401).body("El token no contiene un Tenant ID valido.");
                 }
                 
             } catch (Exception e) {
@@ -109,19 +106,21 @@ public class GatewayController {
         }
 
         HttpEntity<String> httpEntity = new HttpEntity<>(body, headers);
+        
+        // 🔄 CORREGIDO: Reconstruir la URL incluyendo los Query Params (?dni=XXXX)
         String targetUrl = baseServiceUrl + request.getRequestURI();
+        if (request.getQueryString() != null) {
+            targetUrl += "?" + request.getQueryString();
+        }
 
         try {
             return restTemplate.exchange(targetUrl, method, httpEntity, String.class);
         } catch (HttpStatusCodeException e) {
-            return ResponseEntity.status(e.getStatusCode())
-                    .headers(e.getResponseHeaders())
-                    .body(e.getResponseBodyAsString());
+            return ResponseEntity.status(e.getStatusCode()).body(e.getResponseBodyAsString());
         }
     }
 
     private ResponseEntity<String> ejecutarProxySinJwt(String baseServiceUrl, String body, HttpMethod method, HttpServletRequest request) {
-        // 🛡️ ESCUDO CRÍTICO: También para las rutas libres
         if (method == HttpMethod.OPTIONS) {
             return ResponseEntity.ok().build();
         }
@@ -135,14 +134,17 @@ public class GatewayController {
                 });
 
         HttpEntity<String> httpEntity = new HttpEntity<>(body, headers);
+        
+        // 🔄 CORREGIDO: Reconstruir la URL incluyendo los Query Params (?param=value)
         String targetUrl = baseServiceUrl + request.getRequestURI();
+        if (request.getQueryString() != null) {
+            targetUrl += "?" + request.getQueryString();
+        }
 
         try {
             return restTemplate.exchange(targetUrl, method, httpEntity, String.class);
         } catch (HttpStatusCodeException e) {
-            return ResponseEntity.status(e.getStatusCode())
-                    .headers(e.getResponseHeaders())
-                    .body(e.getResponseBodyAsString());
+            return ResponseEntity.status(e.getStatusCode()).body(e.getResponseBodyAsString());
         }
     }
 }
