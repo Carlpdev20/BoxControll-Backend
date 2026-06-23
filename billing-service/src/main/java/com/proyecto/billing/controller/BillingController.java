@@ -89,4 +89,21 @@ public class BillingController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error al obtener el historial financiero del miembro");
         }
     }
+    
+ // ============================================================================
+    // 4. ENDPOINT: LISTAR TODOS LOS PAGOS REALIZADOS (HISTORIAL DE CAJA GLOBAL)
+    // ============================================================================
+    @GetMapping("/payments")
+    public ResponseEntity<?> listarHistorialPagos(
+            @RequestHeader("X-Tenant-Id") String tenantIdHeader) {
+        try {
+            UUID tenantId = UUID.fromString(tenantIdHeader);
+            // Nota: Asegúrate de tener este método en tu billingService, 
+            // o que llame directamente al findAll/findByTenantId de tu PaymentRepository
+            List<PaymentResponseDTO> pagos = billingService.listarTodosLosPagos(tenantId);
+            return ResponseEntity.ok(pagos);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error al obtener el historial de caja");
+        }
+    }
 }

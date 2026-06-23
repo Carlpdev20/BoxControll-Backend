@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
 public class BillingService {
 
     @Autowired
-    private PaymentRepository paymentRepo;
+    private PaymentRepository paymentRepo; // 🎯 Nombre clave: paymentRepo
 
     @Autowired
     private InvoiceRepository invoiceRepo;
@@ -34,31 +34,26 @@ public class BillingService {
         
         Invoice invoice = null;
 
-        // 1. Si el pago viene amarrado a una cuota (Invoice), la validamos y actualizamos
         if (dto.getInvoiceId() != null) {
             invoice = invoiceRepo.findById(dto.getInvoiceId())
                     .orElseThrow(() -> new RuntimeException("Cuota (Invoice) no encontrada"));
             
-            // Verificación de seguridad Multi-tenant
             if (!invoice.getTenantId().equals(tenantId)) {
                 throw new RuntimeException("Acceso denegado: La cuota no pertenece a este gimnasio");
             }
 
-            // Cambiar el estado de la cuota a pagada
             invoice.setStatus("paid");
             invoiceRepo.save(invoice);
         }
 
-        // 2. Validación de regla de negocio: Si es transferencia, exige número de referencia
         if ("transfer".equalsIgnoreCase(dto.getPaymentMethod()) && 
            (dto.getReferenceNumber() == null || dto.getReferenceNumber().trim().isEmpty())) {
             throw new RuntimeException("Las transferencias bancarias requieren obligatoriamente un número de referencia");
         }
 
-        // 3. Mapear DTO a la Entidad Real de Pagos
         Payment payment = new Payment();
-        payment.setTenantId(tenantId); // 🔒 Asignamos el Tenant del administrador actual
-        payment.setInvoice(invoice);   // Vinculación física de objetos
+        payment.setTenantId(tenantId);
+        payment.setInvoice(invoice);   
         payment.setMembershipId(dto.getMembershipId());
         payment.setMemberId(dto.getMemberId());
         payment.setAmount(dto.getAmount());
@@ -69,10 +64,8 @@ public class BillingService {
         payment.setNotes(dto.getNotes());
         payment.setStatus("completed");
 
-        // 4. Guardar el pago en PostgreSQL
         Payment paymentGuardado = paymentRepo.save(payment);
 
-        // 5. Construir el DTO de respuesta para el Frontend
         PaymentResponseDTO response = new PaymentResponseDTO();
         response.setId(paymentGuardado.getId());
         response.setInvoiceId(invoice != null ? invoice.getId() : null);
@@ -91,12 +84,11 @@ public class BillingService {
     // ============================================================================
     @Transactional(readOnly = true)
     public List<InvoiceResponseDTO> listarCuotasMorosas(UUID tenantId) {
-        // Busca las cuotas 'unpaid' cuyo due_date ya pasó con respecto a HOY
-        List<Invoice> morosas = invoiceRepo.findByTenantIdAndStatusAndDueDateBefore(
-                tenantId, "unpaid", LocalDate.now());
+        // 🎯 CAMBIO: Quitamos el filtro de fecha anterior para permitir pagos adelantados
+        List<Invoice> porCobrar = invoiceRepo.findByTenantIdAndStatus(tenantId, "unpaid");
 
-        // Convertimos la lista de entidades a DTOs limpios para Angular
-        return morosas.stream().map(this::mapearAInvoiceResponseDTO).collect(Collectors.toList());
+        // Convertimos a DTOs limpios para Angular
+        return porCobrar.stream().map(this::mapearAInvoiceResponseDTO).collect(Collectors.toList());
     }
 
     // ============================================================================
@@ -106,6 +98,28 @@ public class BillingService {
     public List<InvoiceResponseDTO> listarHistorialCuotasMiembro(UUID tenantId, UUID memberId) {
         List<Invoice> historial = invoiceRepo.findByTenantIdAndMemberId(tenantId, memberId);
         return historial.stream().map(this::mapearAInvoiceResponseDTO).collect(Collectors.toList());
+    }
+
+    // ============================================================================
+    // 4. HISTORIAL DE CAJA GLOBAL (MÉTODO CORREGIDO)
+    // ============================================================================
+    @Transactional(readOnly = true)
+    public List<PaymentResponseDTO> listarTodosLosPagos(UUID tenantId) {
+        // 🎯 CORREGIDO: Cambiado paymentRepository por paymentRepo para que compile sin problemas
+        List<Payment> pagos = paymentRepo.findByTenantIdOrderByCreatedAtDesc(tenantId);
+        
+        return pagos.stream().map(p -> {
+            PaymentResponseDTO dto = new PaymentResponseDTO();
+            dto.setId(p.getId());
+            dto.setInvoiceId(p.getInvoice() != null ? p.getInvoice().getId() : null);
+            dto.setAmount(p.getAmount());
+            dto.setPaymentDate(p.getPaymentDate());
+            dto.setPaymentMethod(p.getPaymentMethod());
+            dto.setReferenceNumber(p.getReferenceNumber());
+            dto.setStatus(p.getStatus());
+            dto.setMemberId(p.getMemberId()); 
+            return dto;
+        }).collect(Collectors.toList());
     }
 
     // ============================================================================
@@ -132,7 +146,7 @@ public class BillingService {
         invoice.setInvoiceNumber(dto.getInvoiceNumber());
         invoice.setAmount(dto.getAmount());
         invoice.setDueDate(dto.getDueDate());
-        invoice.setStatus("unpaid"); // Nace como deuda pendiente
+        invoice.setStatus("unpaid");
 
         Invoice guardada = invoiceRepo.save(invoice);
         return mapearAInvoiceResponseDTO(guardada);

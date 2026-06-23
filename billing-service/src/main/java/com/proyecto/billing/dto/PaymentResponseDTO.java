@@ -15,4 +15,5 @@ public class PaymentResponseDTO {
     private LocalDate paymentDate;  // Fecha del cobro [cite: 54]
     private String referenceNumber; // Código de operación bancaria verificado 
     private String status;          // Estado final: 'completed' 
+    private UUID memberId;
 }
