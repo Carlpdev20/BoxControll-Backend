@@ -6,8 +6,11 @@ import java.util.UUID;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -32,19 +35,29 @@ public class Member {
 
     @Column(name = "tenant_id", nullable = false)
     private UUID tenantId;
-
+    
+    @JsonProperty("name")
     @Column(name = "first_name", nullable = false, length = 100)
     private String firstName;
 
+    @JsonProperty("lastName")
     @Column(name = "last_name", nullable = false, length = 100)
     private String lastName;
 
+    @Column(length = 50)
+    private String plan;
+
+    @JsonProperty("expiresAt")
+    @Column(name = "expires_at")
+    private LocalDateTime expiresAt;
+    
     private String email;
     private String phone;
 
     @Column(name = "document_type", length = 20)
     private String documentType;
 
+    @JsonProperty("dni")
     @Column(name = "document_number", nullable = false, length = 20)
     private String documentNumber;
 

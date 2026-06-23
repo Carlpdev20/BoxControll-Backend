@@ -49,6 +49,10 @@ CREATE TABLE members (
 CREATE INDEX idx_members_tenant_id ON members (tenant_id);
 CREATE INDEX idx_members_document ON members (document_number);
 
+ALTER TABLE members 
+ADD COLUMN plan VARCHAR(50),
+ADD COLUMN expires_at TIMESTAMP;
+
 -- 4. memberships: Historial de afiliaciones y ciclos de acceso contratados[cite: 46].
 CREATE TABLE memberships (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

@@ -15,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod; // 👈 Agregado
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
@@ -22,7 +23,13 @@ import org.springframework.web.client.RestTemplate;
 import java.util.Collections;
 
 @RestController
-@CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true", allowedHeaders = "*")
+// 🔄 OPTIMIZADO: Declaramos explícitamente los métodos permitidos para el Preflight de CORS
+@CrossOrigin(
+    origins = "http://localhost:4200", 
+    allowCredentials = "true", 
+    allowedHeaders = "*",
+    methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.OPTIONS}
+)
 public class GatewayController {
 
     private final RestTemplate restTemplate = new RestTemplate();
@@ -30,9 +37,6 @@ public class GatewayController {
     @Value("${jwt.secret}")
     private String secretString;
 
-    // ============================================================================
-    // 1. PROXY DE AUTENTICACIÓN (Ruta Libre -> Puerto 8081)
-    // ============================================================================
     @RequestMapping("/auth/**")
     public ResponseEntity<String> proxyAuthService(
             @RequestBody(required = false) String body,
@@ -41,9 +45,6 @@ public class GatewayController {
         return ejecutarProxySinJwt("http://localhost:8081", body, method, request);
     }
 
-    // ============================================================================
-    // 2. PROXY DE FACTURACIÓN (Ruta Protegida -> Puerto 8082) 💳
-    // ============================================================================
     @RequestMapping("/api/billing/**")
     public ResponseEntity<String> proxyBillingService(
             @RequestBody(required = false) String body,
@@ -52,9 +53,6 @@ public class GatewayController {
         return ejecutarProxyConJwt("http://localhost:8082", body, method, request);
     }
 
-    // ============================================================================
-    // 3. PROXY DE MIEMBROS (Ruta Protegida por Defecto -> Puerto 8084) 🏋️
-    // ============================================================================
     @RequestMapping("/api/**")
     public ResponseEntity<String> proxyMemberService(
             @RequestBody(required = false) String body,
@@ -64,10 +62,15 @@ public class GatewayController {
     }
 
     // ============================================================================
-    // MÉTODOS UTILITARIOS DE INFRAESTRUCTURA (REUSABILIDAD)
+    // MÉTODOS UTILITARIOS OPTIMIZADOS
     // ============================================================================
     
     private ResponseEntity<String> ejecutarProxyConJwt(String baseServiceUrl, String body, HttpMethod method, HttpServletRequest request) {
+        // 🛡️ ESCUDO CRÍTICO: Si es un OPTIONS, respondemos 200 OK de inmediato para aprobar el CORS
+        if (method == HttpMethod.OPTIONS) {
+            return ResponseEntity.ok().build();
+        }
+
         HttpHeaders headers = new HttpHeaders();
         Collections.list(request.getHeaderNames())
                 .forEach(headerName -> {
@@ -76,7 +79,7 @@ public class GatewayController {
                     }
                 });
 
-        // 🔒 --- INTERCEPTACIÓN, EXTRACCIÓN Y VALIDACIÓN JWT ---
+        // 🔒 --- VALIDA_JWT (Solo se ejecuta para GET, POST, PUT, DELETE) ---
         String authHeader = request.getHeader("Authorization");
         
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
@@ -93,9 +96,9 @@ public class GatewayController {
                 String tenantId = claims.get("tenant_id", String.class);
                 
                 if (tenantId != null) {
-                    headers.add("X-Tenant-Id", tenantId); // 🔒 Inyección Multi-tenant segura
+                    headers.set("X-Tenant-Id", tenantId); 
                 } else {
-                    return ResponseEntity.status(401).body("El token no contiene un Tenant ID valido.");
+                    return ResponseEntity.status(401).body("El token no contains un Tenant ID valido.");
                 }
                 
             } catch (Exception e) {
@@ -118,6 +121,11 @@ public class GatewayController {
     }
 
     private ResponseEntity<String> ejecutarProxySinJwt(String baseServiceUrl, String body, HttpMethod method, HttpServletRequest request) {
+        // 🛡️ ESCUDO CRÍTICO: También para las rutas libres
+        if (method == HttpMethod.OPTIONS) {
+            return ResponseEntity.ok().build();
+        }
+
         HttpHeaders headers = new HttpHeaders();
         Collections.list(request.getHeaderNames())
                 .forEach(headerName -> {

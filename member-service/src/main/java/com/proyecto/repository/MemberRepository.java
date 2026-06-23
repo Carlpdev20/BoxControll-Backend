@@ -13,4 +13,5 @@ public interface MemberRepository extends JpaRepository<Member, UUID> {
     List<Member> findByTenantIdAndStatus(UUID tenantId, String status);
     Optional<Member> findByTenantIdAndId(UUID tenantId, UUID id);
     boolean existsByTenantIdAndDocumentNumber(UUID tenantId, String documentNumber);
+    List<Member> findByTenantIdAndStatusNot(UUID tenantId, String status);
 }

@@ -28,21 +28,35 @@ public class MemberController {
     }
 
     @PostMapping
-    public ResponseEntity<Member> crear(@RequestBody MemberDTO dto) {
+    public ResponseEntity<Member> crear(
+            @RequestHeader("X-Tenant-Id") String tenantIdHeader, // Recuperamos el Tenant del Gateway
+            @RequestBody MemberDTO dto) {
+        
+        UUID tenantId = UUID.fromString(tenantIdHeader);
+        dto.setTenantId(tenantId);
+        
         return ResponseEntity.ok(memberService.crear(dto));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<Member> actualizar(
-            @RequestHeader("X-Tenant-Id") UUID tenantId, 
+            @RequestHeader("X-Tenant-Id") String tenantIdHeader, 
             @PathVariable UUID id, 
             @RequestBody MemberDTO dto) {
+        
+        UUID tenantId = UUID.fromString(tenantIdHeader); // 🔑 Parseo explícito y seguro
         return ResponseEntity.ok(memberService.actualizar(tenantId, id, dto));
     }
 
+
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> eliminar(@RequestHeader("X-Tenant-Id") UUID tenantId, @PathVariable UUID id) {
-        memberService.eliminarLogico(tenantId, id); // Redirigido a la baja lógica segura
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<Member> eliminar(
+            @RequestHeader("X-Tenant-Id") String tenantIdHeader, 
+            @PathVariable UUID id) {
+        
+        UUID tenantId = UUID.fromString(tenantIdHeader);
+        // 🔄 Ejecutamos el conmutador y devolvemos el Member actualizado con su nuevo status
+        Member memberActualizado = memberService.conmutarEstado(tenantId, id); 
+        return ResponseEntity.ok(memberActualizado);
     }
 }
